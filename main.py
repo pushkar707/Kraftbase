@@ -126,4 +126,39 @@ def delete_form(form_id: int, db: db_dependency, request: Request):
         Form.user_id == request.state.user['id']
     ).delete()
     db.commit()
-    return {'message': 'Form deleted successfully'}
+    return {'message': 'Form deleted successfully', 'form_id': form_id}
+
+
+@app.get('/forms')
+def get_all_forms(db: db_dependency, request: Request):
+    forms = db.query(Form).filter(
+        Form.user_id == request.state.user['id']
+    ).all()
+    # with entitites field not working as fields is a JSON, hence need to explicitly remove user_id as a quicker solutuon
+    forms_updated = [
+        {'id': form.id, 'title': form.title,
+            'description': form.description, 'fields': form.fields}
+        for form in forms
+    ]
+    return {'message': 'Fetched all forms successfully', 'data': {'forms': forms_updated}}
+
+
+@app.get('/forms/{form_id}')
+def get_one_form(form_id: int, db: db_dependency, request: Request):
+    form = db.query(Form).filter(
+        Form.id == form_id,
+        Form.user_id == request.state.user['id']
+    ).first()
+    if not form:
+        raise HTTPException(404, 'Form not found')
+    # with entitites field not working as fields is a JSON, hence need to explicitly remove user_id as a quicker solutuon
+    form_updated = {
+        'id': form.id,
+        'title': form.title,
+        'description': form.description,
+        'fields': form.fields
+    }
+    return {'message': 'Fetched all forms successfully', 'data': {'form': form_updated}}
+
+
+# FORM SUBMISSION
