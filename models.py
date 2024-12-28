@@ -24,3 +24,14 @@ class Form(Base):
     user_id = Column(Integer, ForeignKey('users.id'))
 
     user = relationship('User', back_populates='forms')
+    submissions = relationship('Submission', back_populates='form')
+
+
+class Submission(Base):
+    __tablename__ = 'submissions'
+
+    id = Column(Integer, primary_key=True, index=True)
+    responses = Column(JSON)
+    form_id = Column(Integer, ForeignKey('forms.id'))
+
+    form = relationship('Form', back_populates='submissions')

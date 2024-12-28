@@ -20,3 +20,12 @@ def generate_session_id():
     if (redis_client.exists(f'session:{id}')):
         return generate_session_id()
     return id
+
+def get_simple_type(value):
+    if isinstance(value, str):
+        return "string"
+    elif isinstance(value, (int, float)):
+        return "number"
+    elif isinstance(value, bool):
+        return "boolean"
+    return 'NA'

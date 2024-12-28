@@ -1,13 +1,14 @@
 from fastapi import FastAPI, Depends, Response, HTTPException, Request
 from starlette.middleware.base import BaseHTTPMiddleware
 import models
-from models import User, Form
+from models import User, Form, Submission
 from db import engine, SessionLocal
 from sqlalchemy.orm import Session
 from typing import Annotated
 from schema.User import UserRegisteration, UserLogin
 from schema.Form import CreateForm
-from utils import verify_password, hash_password, redis_client, generate_session_id
+from schema.Submit import SubmitForm
+from utils import verify_password, hash_password, redis_client, generate_session_id, get_simple_type
 from sqlalchemy.exc import IntegrityError
 import json
 
@@ -90,12 +91,15 @@ def logout(request: Request, response: Response):
 
 class AuthenticationMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
-        if any(request.url.path.startswith(path) for path in ['/forms']):
-            session_id = request.cookies.get('sid')
-            user = redis_client.get(f'session:{session_id}')
-            if not user:
-                raise HTTPException(401, 'Please login to access this route')
-            request.state.user = json.loads(user)
+        url_path = request.url.path
+        if any(url_path.startswith(path) for path in ['/forms']):
+            if (not any(url_path.startswith(path) for path in ['/forms/submit'])):
+                session_id = request.cookies.get('sid')
+                user = redis_client.get(f'session:{session_id}')
+                if not user:
+                    raise HTTPException(
+                        401, 'Please login to access this route')
+                request.state.user = json.loads(user)
         return await call_next(request)
 
 
@@ -162,3 +166,34 @@ def get_one_form(form_id: int, db: db_dependency, request: Request):
 
 
 # FORM SUBMISSION
+@app.post('/forms/submit/{form_id}')
+def submit_form(form_id: int, submission: SubmitForm, db: db_dependency, request: Request):
+    form = db.query(Form).filter(
+        Form.id == form_id
+    ).first()
+    if not form:
+        raise HTTPException(404, 'Form not found')
+
+    responses = []
+
+    for form_field in form.fields:
+        curr_response_arr = [
+            res for res in submission.response if res.field_id == form_field['field_id']
+        ]
+        if not curr_response_arr and form_field['required']:
+            raise HTTPException(400, 'A required field is missing')
+        if (curr_response_arr):
+            curr_response = curr_response_arr[0]
+            if form_field['type'] != get_simple_type(curr_response.value):
+                raise HTTPException(
+                    400, 'Response is not in valid format/type')
+            responses.append(curr_response.model_dump())
+
+    if not responses:
+        raise HTTPException(
+            400, 'You need to fill out atleast one item to submit a response')
+    db_submission = Submission(responses=responses, form_id=form.id)
+    db.add(db_submission)
+    db.commit()
+    db.refresh(db_submission)
+    return {'message': 'Submission added successfully', 'submission': {'responses': responses}}
