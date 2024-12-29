@@ -12,6 +12,10 @@ class User(Base):
     email = Column(String, unique=True, index=True)
     hashed_password = Column(String)
 
+    created_at = Column(DateTime, default=datetime.now())
+    updated_at = Column(DateTime, default=datetime.now(),
+                        onupdate=datetime.now())
+
     forms = relationship('Form', back_populates='user')
 
 
@@ -23,6 +27,10 @@ class Form(Base):
     description = Column(String)
     fields = Column(JSON)
     user_id = Column(Integer, ForeignKey('users.id'))
+
+    created_at = Column(DateTime, default=datetime.now())
+    updated_at = Column(DateTime, default=datetime.now(),
+                        onupdate=datetime.now())
 
     user = relationship('User', back_populates='forms')
     submissions = relationship('Submission', back_populates='form')
