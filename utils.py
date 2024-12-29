@@ -1,8 +1,9 @@
 import bcrypt
 import aioredis
 import uuid
+import os
 
-redis_client = aioredis.from_url('redis://localhost:6379')
+redis_client = aioredis.from_url(os.environ.get('REDIS_URL'))
 
 
 def hash_password(plain_text_password):

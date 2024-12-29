@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, Response, HTTPException, Request, Query
+from fastapi import FastAPI, Depends, Response, HTTPException, Request, Query, APIRouter
 from starlette.middleware.base import BaseHTTPMiddleware
 import models
 from models import User, Form, Submission
@@ -29,6 +29,8 @@ async def get_db():
 
 
 db_dependency = Annotated[Session, Depends(get_db)]
+
+user_router = APIRouter(prefix='/users', tags=['Users'])
 SESSION_TIME = 60 * 60 * 24
 
 
