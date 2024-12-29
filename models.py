@@ -1,6 +1,7 @@
-from sqlalchemy import String, Integer, Column, JSON, ForeignKey
+from sqlalchemy import String, Integer, Column, JSON, ForeignKey, DateTime
 from db import Base
 from sqlalchemy.orm import relationship
+from datetime import datetime
 
 
 class User(Base):
@@ -30,8 +31,9 @@ class Form(Base):
 class Submission(Base):
     __tablename__ = 'submissions'
 
-    id = Column(Integer, primary_key=True, index=True)
-    responses = Column(JSON)
+    submission_id = Column(Integer, primary_key=True, index=True)
+    data = Column(JSON)
     form_id = Column(Integer, ForeignKey('forms.id'))
+    submitted_at = Column(DateTime, default=datetime.now())
 
     form = relationship('Form', back_populates='submissions')

@@ -1,9 +1,10 @@
-from fastapi import FastAPI, Depends, Response, HTTPException, Request
+from fastapi import FastAPI, Depends, Response, HTTPException, Request, Query
 from starlette.middleware.base import BaseHTTPMiddleware
 import models
 from models import User, Form, Submission
 from db import engine, SessionLocal
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload, aliased
+from sqlalchemy import func
 from typing import Annotated
 from schema.User import UserRegisteration, UserLogin
 from schema.Form import CreateForm
@@ -174,7 +175,7 @@ def submit_form(form_id: int, submission: SubmitForm, db: db_dependency, request
     if not form:
         raise HTTPException(404, 'Form not found')
 
-    responses = []
+    data = {}
 
     for form_field in form.fields:
         curr_response_arr = [
@@ -187,13 +188,38 @@ def submit_form(form_id: int, submission: SubmitForm, db: db_dependency, request
             if form_field['type'] != get_simple_type(curr_response.value):
                 raise HTTPException(
                     400, 'Response is not in valid format/type')
-            responses.append(curr_response.model_dump())
+            data[curr_response.field_id] = curr_response.value
 
-    if not responses:
+    if not data:
         raise HTTPException(
             400, 'You need to fill out atleast one item to submit a response')
-    db_submission = Submission(responses=responses, form_id=form.id)
+    db_submission = Submission(data=data, form_id=form.id)
     db.add(db_submission)
     db.commit()
     db.refresh(db_submission)
-    return {'message': 'Submission added successfully', 'submission': {'responses': responses}}
+    return {'message': 'Submission added successfully', 'submission': {'responses': data}}
+
+
+@app.post('/forms/submissions/{form_id}')
+def get_form_submissions(
+    form_id: int,
+    db: db_dependency,
+    request: Request,
+    page: int = Query(1, ge=1),
+    limit: int = Query(10, ge=1, le=50)
+
+):
+    db_form = db.query(Form).options(
+        joinedload(Form.submissions)
+    ).filter(
+        Form.id == form_id,
+        Form.user_id == request.state.user['id']
+    ).limit(limit).offset(
+        (page - 1) * limit
+    ).first()
+    if not db_form:
+        raise HTTPException(404, 'Form not found')
+
+    total_count = db.query(func.count(Submission.submission_id)).filter(
+        Submission.form_id == form_id).scalar()
+    return {'total_count': total_count, 'page': page, 'limit': limit, 'submissions': db_form.submissions}
