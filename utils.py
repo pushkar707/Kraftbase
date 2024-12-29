@@ -1,9 +1,6 @@
 import bcrypt
-import aioredis
 import uuid
-import os
-
-redis_client = aioredis.from_url(os.environ.get('REDIS_URL'))
+from redis_client import key_exists
 
 
 def hash_password(plain_text_password):
@@ -18,7 +15,7 @@ def verify_password(plain_text_password, hashed_password):
 
 async def generate_session_id():
     id = uuid.uuid4()
-    if (await redis_client.exists(f'session:{id}')):
+    if (await key_exists(id)):
         return generate_session_id()
     return id
 

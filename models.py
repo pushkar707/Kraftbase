@@ -26,7 +26,7 @@ class Form(Base):
     title = Column(String)
     description = Column(String)
     fields = Column(JSON)
-    user_id = Column(Integer, ForeignKey('users.id'))
+    user_id = Column(Integer, ForeignKey('users.id', ondelete="CASCADE"))
 
     created_at = Column(DateTime, default=datetime.now())
     updated_at = Column(DateTime, default=datetime.now(),
@@ -41,7 +41,7 @@ class Submission(Base):
 
     submission_id = Column(Integer, primary_key=True, index=True)
     data = Column(JSON)
-    form_id = Column(Integer, ForeignKey('forms.id'))
+    form_id = Column(Integer, ForeignKey('forms.id', ondelete="CASCADE"))
     submitted_at = Column(DateTime, default=datetime.now())
 
     form = relationship('Form', back_populates='submissions')
