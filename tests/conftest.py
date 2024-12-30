@@ -6,29 +6,19 @@ from main import app
 from httpx import AsyncClient, ASGITransport
 import os
 import asyncio
+from sqlalchemy.pool import NullPool
 from dotenv import load_dotenv
 load_dotenv()
 
 SQLALCHEMY_DATABASE_URL = os.environ.get('TEST_DB')
 
-engine = create_async_engine(SQLALCHEMY_DATABASE_URL, echo=False)
+engine = create_async_engine(
+    SQLALCHEMY_DATABASE_URL, echo=False, poolclass=NullPool)
 
 # AsyncSession for SQLAlchemy
 TestingSessionLocal = sessionmaker(
     engine, class_=AsyncSession, expire_on_commit=False
 )
-
-# Fixture to create and drop tables in the test database
-
-
-# @pytest_asyncio.fixture(scope="session", autouse=True)
-# async def create_tables():
-#     async with engine.begin() as conn:
-#         await conn.run_sync(Base.metadata.drop_all)
-#         await conn.run_sync(Base.metadata.create_all)
-#     yield
-
-# Fixture to provide a session to interact with the database during tests
 
 
 @pytest_asyncio.fixture(scope="function")
@@ -36,7 +26,15 @@ async def db():
     async with TestingSessionLocal() as session:
         yield session  # Provide the session to the tests
 
-# Fixture for overriding the `get_db` dependency
+
+@pytest_asyncio.fixture(scope="session")
+def event_loop():
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+    yield loop
+    loop.close()
 
 
 @pytest_asyncio.fixture(scope="function")
