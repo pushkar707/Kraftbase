@@ -6,7 +6,6 @@ from controllers.Form import create_form_func, delete_form_func, get_all_forms_f
 import routes
 
 router = APIRouter(prefix='/forms', tags=['Forms'])
-router.include_router(router=routes.Submit.router)
 
 
 @router.post('/create')
@@ -30,3 +29,5 @@ async def get_all_forms(db: db_dependency, request: Request):
 @router.get('/{form_id}')
 async def get_one_form(form_id: int, db: db_dependency, request: Request):
     return await get_one_form_func(form_id, db, request)
+
+router.include_router(router=routes.Submit.router)

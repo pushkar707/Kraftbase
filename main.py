@@ -21,7 +21,7 @@ app.include_router(router=routes.User.router)
 app.include_router(router=routes.Form.router)
 
 
-@app.post('/forms/submissions/{form_id}')
+@app.get('/forms/submissions/{form_id}')
 async def get_form_submissions(
     form_id: int,
     db: db_dependency,
